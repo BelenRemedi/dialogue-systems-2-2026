@@ -2,7 +2,8 @@
 
 import { Command } from "commander";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { v4 as uuidv4 } from "uuid";
 import OpenAI from "openai";
@@ -97,6 +98,45 @@ program
     console.log(
       `Succesfully added ${chunks.length} document into collection: ${collection}`,
     );
+  });
+
+const titleFromFilename = (filename: string) =>
+  basename(filename, ".txt").replace(/^page-\d+-/, "");
+
+const pageIndexFromFilename = (filename: string) =>
+  Number(filename.match(/^page-(\d+)-/)?.[1]);
+
+program
+  .command("addFolder")
+  .description(
+    "Chunk every .txt file in <folder> and add them to a collection, with title and URL metadata.",
+  )
+  .argument("<collection>", "collection name")
+  .argument("<folder>", "folder path")
+  .option("--urls <path>", "file with one URL per page, in page order")
+  .action(async (collection, folder, options) => {
+    const urls = options.urls
+      ? (await readFile(options.urls, "utf8")).split("\n").map((u) => u.trim())
+      : [];
+    const files = (await readdir(folder)).filter((f) => f.endsWith(".txt"));
+
+    let total = 0;
+    for (const file of files.sort()) {
+      const title = titleFromFilename(file);
+      const url = urls[pageIndexFromFilename(file)];
+      const chunks = await makeChunksFromFile(join(folder, file));
+      const points = await Promise.all(
+        chunks.map(async (chunk, chunkIndex) => ({
+          id: uuidv4(),
+          vector: await embed(`${title}\n\n${chunk}`),
+          payload: { text: chunk, title, url, source: file, chunk: chunkIndex },
+        })),
+      );
+      await client.upsert(collection, { wait: true, points });
+      total += points.length;
+      console.log(`${file}: ${points.length} chunks`);
+    }
+    console.log(`Succesfully added ${total} chunks into collection: ${collection}`);
   });
 
 program

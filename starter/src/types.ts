@@ -1,10 +1,21 @@
-import { Hypothesis, SpeechStateExternalEvent } from "speechstate";
+import { SpeechStateExternalEvent } from "speechstate";
 import { AnyActorRef } from "xstate";
+
+export type Message = {
+  role: "assistant" | "user" | "system";
+  content: string;
+};
 
 export interface DMContext {
   spstRef: AnyActorRef;
-  lastResult: Hypothesis[] | null;
-  // nextUtterance: string;
+  messages: Message[];
+  documents: Document[];
 }
 
-export type DMEvents = SpeechStateExternalEvent | { type: "CLICK" } | {type: "DONE"};
+export type Document = {
+  title: string;
+  url?: string;
+  text: string;
+};
+
+export type DMEvents = SpeechStateExternalEvent | { type: "CLICK" } | { type: "DONE" };
