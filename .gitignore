@@ -136,3 +136,6 @@ tools/custom-gcl.hash
 !tsc/testdata/submoduleTriaged.txt
 
 **/credentials.ts
+
+# Qdrant storage (zipped and attached to Canvas instead)
+rag/qdrant_data/
