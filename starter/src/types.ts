@@ -9,6 +9,13 @@ export type Message = {
 export interface DMContext {
   spstRef: AnyActorRef;
   messages: Message[];
+  documents: Document[];
 }
+
+export type Document = {
+  title: string;
+  url?: string;
+  text: string;
+};
 
 export type DMEvents = SpeechStateExternalEvent | { type: "CLICK" } | { type: "DONE" };
